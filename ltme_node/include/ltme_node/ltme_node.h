@@ -65,7 +65,7 @@ private:
   double range_max_;
   int average_factor_;
   int shadow_filter_strength_;
-
+  int scan_frequency_override_;
   std::unique_ptr<ldcp_sdk::Device> device_;
   std::mutex mutex_;
 

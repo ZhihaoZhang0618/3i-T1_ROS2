@@ -7,7 +7,7 @@ import launch_ros.actions
 def generate_launch_description():
   return launch.LaunchDescription([
     launch_ros.actions.Node(
-      package="ltme_node", node_executable="ltme_node", node_name=["ltme_node"],
+      package="ltme_node", executable="ltme_node",
       output="screen",
       parameters=[
         { "device_model": "LTME-02A" },
@@ -16,7 +16,7 @@ def generate_launch_description():
         { "device_address": "192.168.10.160" },
         
         # Frame ID used by the published LaserScan messages
-        # { "frame_id": "laser" },
+        { "frame_id": "laser" },
 
         # If this option is enabled, published LaserScan messages will have their X and Z axes inverted.
         # This is mostly useful when the device is mounted upside down, as it effectively undos the inversion created by the mounting,
@@ -45,6 +45,12 @@ def generate_launch_description():
         # Adjust how data post-processing stage will filter scan artifacts caused by veiling effect
         # Valid range is between 0 and 100 inclusive, larger value leads to more aggressive filtering
         # { "shadow_filter_strength": 15 },
+        
+        #  LTME-02 can be configured with different scan frequencies, ranging from 10 Hz to 30 Hz with 5 Hz increments. 
+        # The driver automatically queries device for its frequency upon connection and setup LaserScan parameters accordingly. 
+        # If for some reason this doesn't work for you (e.g., a device with outdated firmware), 
+        # this parameter can be used to override automatic detection and manually specify a correct frequency value.
+        { "scan_frequency_override": 30 }
       ]
     )
   ])
