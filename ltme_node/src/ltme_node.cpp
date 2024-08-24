@@ -257,8 +257,8 @@ void LidarDriver::run()
         laser_scan.angle_max = (!invert_frame_) ? angle_max_ : angle_min_;
         laser_scan.angle_increment = ((!invert_frame_) ? 1 : -1) *
                                      2 * M_PI / beam_count * average_factor_;
-        laser_scan.time_increment = 1.0 / scan_frequency / beam_count * average_factor_;
-        laser_scan.scan_time = 1.0 / scan_frequency;
+        // laser_scan.time_increment = 1.0 / scan_frequency / beam_count * average_factor_;
+        // laser_scan.scan_time = 1.0 / scan_frequency;
         laser_scan.range_min = range_min_;
         laser_scan.range_max = range_max_;
 
@@ -285,6 +285,14 @@ void LidarDriver::run()
           }
         };
 
+        //        ros::Time last_frame_end_timestamp;
+        // ros::Time frame_start_timestamp, frame_end_timestamp;
+        //    rclcpp::Time scan_time(scan->header.stamp);
+        // builtin_interfaces::msg::Time msg_time;
+        // msg_time = current_time.to_msg();
+        rclcpp::Time last_frame_end_timestamp;
+        rclcpp::Time frame_start_timestamp, frame_end_timestamp;
+
         while (rclcpp::ok() && !quit_driver_.load())
         {
           laser_scan.ranges.resize(beam_index_max - beam_index_min + 1);
@@ -298,14 +306,16 @@ void LidarDriver::run()
             do
             {
               readScanBlock(scan_block);
+              frame_start_timestamp = node_->now();
             } while (scan_block.block_index != 0);
 
-            laser_scan.header.stamp = node_->now();
+            // laser_scan.header.stamp = node_->now();
 
             while (scan_block.block_index != scan_block.block_count - 1)
             {
               updateLaserScan(scan_block);
               readScanBlock(scan_block);
+              frame_end_timestamp = node_->now();
             }
             updateLaserScan(scan_block);
 
@@ -342,8 +352,27 @@ void LidarDriver::run()
               laser_scan.ranges.resize(final_size);
               laser_scan.intensities.resize(final_size);
             }
+            //
 
-            laser_scan_publisher->publish(laser_scan);
+            double block_duration = (frame_end_timestamp - frame_start_timestamp).seconds() /
+                                     (scan_block.block_count - 1);
+
+            frame_start_timestamp -= rclcpp::Duration::from_seconds(block_duration);
+
+            if (last_frame_end_timestamp.nanoseconds() > 0)
+            {
+              if (frame_start_timestamp < last_frame_end_timestamp)
+                frame_start_timestamp = last_frame_end_timestamp;
+
+              laser_scan.header.stamp = frame_start_timestamp;
+              laser_scan.time_increment = (frame_end_timestamp - frame_start_timestamp).seconds() /
+                                          (scan_block.block_count * scan_block.block_length) * average_factor_;
+              laser_scan.scan_time = (frame_end_timestamp - frame_start_timestamp).seconds();
+              laser_scan_publisher->publish(laser_scan);
+            }
+            last_frame_end_timestamp = frame_end_timestamp;
+
+            //
 
             if (hibernation_requested_.load())
             {
