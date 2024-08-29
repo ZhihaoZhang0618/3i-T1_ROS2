@@ -272,9 +272,10 @@ void LidarDriver::run()
               continue;
             if (beam_index >= beam_index_excluded_min && beam_index <= beam_index_excluded_max)
               continue;
-            if (scan_block.layers[0].ranges[i] != 0)
+            float range_raw = scan_block.layers[0].ranges[i] * 0.002;
+            if (scan_block.layers[0].ranges[i] != 0 && range_raw >= range_min_ && range_raw <= range_max_)
             {
-              laser_scan.ranges[beam_index - beam_index_min] = scan_block.layers[0].ranges[i] * 0.002;
+              laser_scan.ranges[beam_index - beam_index_min] = range_raw;
               laser_scan.intensities[beam_index - beam_index_min] = scan_block.layers[0].intensities[i];
             }
             else
@@ -355,7 +356,7 @@ void LidarDriver::run()
             //
 
             double block_duration = (frame_end_timestamp - frame_start_timestamp).seconds() /
-                                     (scan_block.block_count - 1);
+                                    (scan_block.block_count - 1);
 
             frame_start_timestamp -= rclcpp::Duration::from_seconds(block_duration);
 
